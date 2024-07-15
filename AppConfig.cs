@@ -5,18 +5,30 @@ namespace MonitoringAndNotificationSystem
 {
     public class AppConfig
     {
-        public IConfiguration Configuration { get; }
+        private readonly IConfigurationRoot _configuration;
 
         public AppConfig()
         {
             var builder = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+               .SetBasePath(Directory.GetCurrentDirectory())
+               .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
 
-            Configuration = builder.Build();
+            _configuration = builder.Build();
         }
 
-        public int GetSamplingInterval() => Configuration.GetValue<int>("ServerStatisticsConfig:SamplingIntervalSeconds");
-        public string GetServerIdentifier() => Configuration.GetValue<string>("ServerStatisticsConfig:ServerIdentifier");
+        public IConfigurationSection GetSection(string key)
+        {
+            return _configuration.GetSection(key);
+        }
+
+        public string GetServerIdentifier()
+        {
+            return _configuration.GetValue<string>("ServerStatisticsConfig:ServerIdentifier");
+        }
+
+        public int GetSamplingInterval()
+        {
+            return _configuration.GetValue<int>("ServerStatisticsConfig:SamplingIntervalSeconds");
+        }
     }
 }
