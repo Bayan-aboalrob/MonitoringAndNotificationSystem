@@ -7,51 +7,32 @@ namespace MonitoringAndNotificationSystem
 {
     public class RabbitMQPublisher : IMessagePublisher, IDisposable
     {
-        private readonly IModel channel;
-        private readonly IConnection connection;
-        private readonly string queueName;
+        private IModel _channel;
+        private readonly string _queueName;
+        private IConnection _connection;
 
-        public RabbitMQPublisher(string hostname, string queue)
+        public RabbitMQPublisher(string hostname, string queueName)
         {
-            Console.WriteLine($"Connecting to RabbitMQ at {hostname}");
-
             var factory = new ConnectionFactory() { HostName = hostname };
-            try
-            {
-                connection = factory.CreateConnection();
-                channel = connection.CreateModel();
-                queueName = queue;
-                channel.QueueDeclare(queue: queueName, durable: false, exclusive: false, autoDelete: false, arguments: null);
-                Console.WriteLine($"Connected to RabbitMQ and declared queue {queueName}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Could not connect to RabbitMQ: {ex.Message}");
-                throw;
-            }
+            _connection = factory.CreateConnection();
+            _channel = _connection.CreateModel();
+            _queueName = queueName;
+            _channel.QueueDeclare(queue: _queueName, durable: false, exclusive: false, autoDelete: false, arguments: null);
         }
 
         public void Publish(ServerStatistics statistics)
         {
-            try
-            {
-                var message = JsonSerializer.Serialize(statistics);
-                var body = Encoding.UTF8.GetBytes(message);
-                channel.BasicPublish(exchange: "", routingKey: queueName, basicProperties: null, body: body);
-                Console.WriteLine($"Published message to queue {queueName}: {message}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error publishing message: {ex.Message}");
-            }
+            var message = JsonSerializer.Serialize(statistics);
+            var body = Encoding.UTF8.GetBytes(message);
+            _channel.BasicPublish(exchange: "", routingKey: _queueName, basicProperties: null, body: body);
         }
 
         public void Dispose()
         {
-            channel?.Close();
-            channel?.Dispose();
-            connection?.Close();
-            connection?.Dispose();
+            _channel?.Close();
+            _channel?.Dispose();
+            _connection?.Close();
+            _connection?.Dispose();
         }
     }
 }

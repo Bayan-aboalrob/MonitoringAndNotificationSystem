@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using System;
+using System.IO;
 
 namespace MonitoringAndNotificationSystem
 {
@@ -22,8 +24,8 @@ namespace MonitoringAndNotificationSystem
             {
                 var config = new AppConfig();
                 var hostname = "localhost";
-                var queueName = "ServerStatistics." + config.GetServerIdentifier(); 
-                var interval = config.GetSamplingInterval() * 1000; 
+                var queueName = "ServerStatistics." + config.GetServerIdentifier();
+                var interval = config.GetSamplingInterval() * 1000;
 
                 Console.WriteLine($"Hostname: {hostname}");
                 Console.WriteLine($"Queue Name: {queueName}");
@@ -53,10 +55,24 @@ namespace MonitoringAndNotificationSystem
             try
             {
                 var config = new AppConfig();
+                var mongoDBConfig = config.GetSection("MongoDB");
+                var signalRConfig = config.GetSection("SignalRConfig");
+                var thresholdsConfig = config.GetSection("AnomalyDetectionConfig");
+
+                var mongoDBService = new MongoDBService(mongoDBConfig["ConnectionString"], mongoDBConfig["DatabaseName"], mongoDBConfig["CollectionName"]);
+                var signalRClient = new SignalRClient(signalRConfig["SignalRUrl"]);
+
+                var memoryUsageAnomalyThreshold = double.Parse(thresholdsConfig["MemoryUsageAnomalyThresholdPercentage"]);
+                var cpuUsageAnomalyThreshold = double.Parse(thresholdsConfig["CpuUsageAnomalyThresholdPercentage"]);
+                var memoryUsageThreshold = double.Parse(thresholdsConfig["MemoryUsageThresholdPercentage"]);
+                var cpuUsageThreshold = double.Parse(thresholdsConfig["CpuUsageThresholdPercentage"]);
+
+                var anomalyDetectionService = new AnomalyDetectionService(mongoDBService, signalRClient, memoryUsageAnomalyThreshold, cpuUsageAnomalyThreshold, memoryUsageThreshold, cpuUsageThreshold);
+
                 var hostname = "localhost";
                 var queueName = "ServerStatistics." + config.GetServerIdentifier();
 
-                var consumer = new RabbitMQConsumer(hostname, queueName);
+                var consumer = new RabbitMQConsumer(hostname, queueName, anomalyDetectionService);
                 consumer.Start();
             }
             catch (Exception ex)
@@ -66,4 +82,3 @@ namespace MonitoringAndNotificationSystem
         }
     }
 }
-
